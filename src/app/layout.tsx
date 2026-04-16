@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inspector } from 'react-dev-inspector';
+//import { Inspector } from 'react-dev-inspector';
 import TargetCursor from '@/components/TargetCursor';
 import './globals.css';
 
@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body className={`antialiased`} suppressHydrationWarning>
-        {isDev && <Inspector />}
+        {isDev}
         <TargetCursor
           targetSelector='a[href], button, [role="button"], .cursor-pointer, .cursor-target'
           spinDuration={2.4}
