@@ -7,10 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { notifyStoredUserChange } from '@/hooks/use-stored-user';
+import { getTurnstileSiteKey } from '@/lib/turnstile-client';
+import { Turnstile } from '@marsidev/react-turnstile';
+
 
 export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileSiteKey = getTurnstileSiteKey();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -48,11 +53,17 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!turnstileToken) {
+      setError('请先完成人机验证');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, turnstileToken }),
       });
 
       const data = await res.json();
@@ -125,10 +136,29 @@ export default function RegisterPage() {
                 disabled={loading}
               />
             </div>
+            {turnstileSiteKey ? (
+              <Turnstile
+                siteKey={turnstileSiteKey}
+                onSuccess={token => {
+                  setTurnstileToken(token);
+                }}
+                onError={() => {
+                  setTurnstileToken('');
+                  setError('人机验证加载失败，请刷新后重试');
+                }}
+                onExpire={() => {
+                  setTurnstileToken('');
+                }}
+              />
+            ) : (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                当前环境未配置 `NEXT_PUBLIC_TURNSTILE_SITE_KEY`，请先补充后再使用注册。
+              </div>
+            )}
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
-              disabled={loading}
+              disabled={loading || !turnstileToken || !turnstileSiteKey}
             >
               {loading ? '注册中...' : '注册'}
             </Button>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/storage/database/db';
+import { getTurnstileSecretKey } from '@/lib/turnstile-server';
 import { createUserRecord } from '@/storage/database/queries/app-queries';
 
 // 密码哈希 - SHA-256
@@ -14,7 +15,34 @@ async function hashPassword(password: string): Promise<string> {
 // 注册
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, turnstileToken } = await request.json();
+    const turnstileSecretKey = getTurnstileSecretKey();
+
+    if (!turnstileToken) {
+      return NextResponse.json({ error: '请完成人机验证' }, { status: 400 });
+    }
+
+    if (!turnstileSecretKey) {
+      return NextResponse.json({ error: '人机验证服务未配置' }, { status: 500 });
+    }
+
+    const verifyResponse = await fetch(
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret: turnstileSecretKey,
+          response: turnstileToken,
+        }),
+      },
+    );
+
+    const verifyResult = await verifyResponse.json();
+
+    if (!verifyResult.success) {
+      return NextResponse.json({ error: '人机验证失败，请重试' }, { status: 403 });
+    }
     
     if (!username || !password) {
       return NextResponse.json({ error: '用户名和密码不能为空' }, { status: 400 });
