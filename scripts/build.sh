@@ -6,12 +6,12 @@ set -Eeuo pipefail
 #cd "${COZE_WORKSPACE_PATH}"
 
 echo "Installing dependencies..."
-pnpm install --prefer-frozen-lockfile --prefer-offline --loglevel debug --reporter=append-only
+echo "Dependencies are installed by the caller."
 
 echo "Building the Next.js project..."
-npx next build
+pnpm exec next build
 
 echo "Bundling server with tsup..."
-npx tsup src/server.ts --format cjs --platform node --target node20 --outDir dist --no-splitting --no-minify
+pnpm exec tsup src/server.ts --format cjs --platform node --target node20 --outDir dist --no-splitting --no-minify
 
 echo "Build completed successfully!"
